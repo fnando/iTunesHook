@@ -20,19 +20,27 @@
 - (void) updateTrackInfo:(NSNotification *)notification {
     NSDictionary *information = [notification userInfo];
     NSString *status = [information objectForKey:@"Player State"];
+    NSTask *task = [[NSTask alloc] init];
+    NSArray *arguments = [[NSArray alloc] init];
+    [task setLaunchPath: [@"~/.ituneshook" stringByExpandingTildeInPath]];
+    
+    if ([status isNotEqualTo:@"Playing"] && [status isNotEqualTo:@"Stopped"]) {
+        return;
+    }
     
     if ([status isEqual: @"Playing"]) {
         NSString *artist = [information objectForKey:@"Artist"];
         NSString *album = [information objectForKey:@"Album"];
         NSString *track = [information objectForKey:@"Name"];
         
-        NSTask *task = [[NSTask alloc] init];
-        [task setLaunchPath: [@"~/.ituneshook" stringByExpandingTildeInPath]];
+        arguments = [NSArray arrayWithObjects: @"playing", artist, album, track, nil];
         
-        NSArray *arguments = [NSArray arrayWithObjects: artist, album, track, nil];
-        [task setArguments: arguments];
-        [task launch];
+    } else if ([status isEqual: @"Stopped"]) {
+        arguments = [NSArray arrayWithObjects: @"stopped", nil];
     }
+    
+    [task setArguments: arguments];
+    [task launch];
 }
 
 - (void) startOnLogin {

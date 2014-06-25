@@ -10,11 +10,74 @@ Here's a sample script that displays the song info using `growlnotify`.
 
 ```bash
 #!/usr/bin/env bash
-artist=$1
-album=$2
-track=$3
+status=$1
+artist=$2
+album=$3
+track=$4
 
-/usr/local/bin/growlnotify -a /Applications/iTunes.app -t "${track}" -m "${artist} — ${album}"
+[ "$status" == "playing" ] && /usr/local/bin/growlnotify -a /Applications/iTunes.app -t "${track}" -m "${artist} — ${album}"
+```
+
+And if you're more like a rubyist, here's what I've using:
+
+```ruby
+#!/usr/bin/env ruby
+require 'net/http'
+require 'uri'
+
+class Notification
+  attr_reader :artist, :album, :track
+
+  def initialize(artist, album, track)
+    @artist = normalize(artist)
+    @album = normalize(album)
+    @track = normalize(track)
+  end
+
+  def playing
+  end
+
+  def stopped
+  end
+
+  private
+
+  def normalize(term)
+    term
+      .to_s
+      .gsub(/'/, "’")
+      .gsub(/(")([^"]+)(")/, "“\\2”")
+  end
+end
+
+class Messages < Notification
+  def playing
+    system %[echo 'tell application "Messages" to set status message to "♫ %{artist} - %{track}"' | osascript] % {
+      artist: artist,
+      track: track
+    }
+  end
+
+  def stopped
+    system %[echo 'tell application "Messages" to set status message to ""' | osascript]
+  end
+end
+
+class Growl < Notification
+  def playing
+    system '/usr/local/bin/growlnotify', '-a', '/Applications/iTunes.app', '-t', "#{track}", '-m', "#{artist} — #{album}"
+  end
+end
+
+status = ARGV[0]
+artist = ARGV[1]
+album = ARGV[2]
+track = ARGV[3]
+
+[Messages, Growl].each do |notification_class|
+  notification = notification_class.new(artist, album, track)
+  notification.public_send(status) if notification.respond_to?(status)
+end
 ```
 
 ## License
